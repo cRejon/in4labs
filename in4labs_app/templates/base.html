@@ -1,0 +1,76 @@
+<html lang="en">
+
+<!-- HEAD -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <title>{{ page_title }}</title>
+    
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- JavaScripts -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    {% block scripts %}{% endblock %}
+
+</head>
+
+<!-- BODY -->
+<body>
+    <header id="main-header">
+        <div class="logos-header">
+            <img class="image" src="{{ url_for('static', filename='img/logo-uned.jpg') }}" alt="logo-uned">
+        </div>
+
+        <div class="page-title">
+            <span class="is-hidden-xs">{{ lab_name }}</span>
+        </div>
+        <div class="log-header">
+            <div align="right">
+                <div >
+                    <p><strong>Log in as</strong>: {{curr_user_name}}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="alert alert-success">
+                {% for message in messages %}
+                <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- For compatibility: maybe useless -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="modal_message" aria-labelledby="modal-message" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <p id="modal-msg"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="loader-bg" style="display: none;">
+        <div class="loader" id="loader" >
+    </div>
+
+    <footer>
+
+    </footer>
+
+</body>
+</html> 
