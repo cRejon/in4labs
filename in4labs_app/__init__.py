@@ -1,212 +1,144 @@
-import datetime
 import os
-import pprint
+import threading
+import time
+from datetime import datetime, timedelta
 
-from tempfile import mkdtemp
-from flask import Flask, session, jsonify, redirect, render_template, url_for, flash
-from flask_login import LoginManager, current_user, login_required, login_user
+from flask import Flask, session, request, redirect, render_template, url_for, flash
+from flask_login import LoginManager, current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
-from flask_migrate import Migrate
 
-from werkzeug.exceptions import Forbidden
-
-from pylti1p3.contrib.flask import FlaskOIDCLogin, FlaskMessageLaunch, FlaskRequest, FlaskCacheDataStorage
-from pylti1p3.tool_config import ToolConfJsonFile
-from pylti1p3.registration import Registration
-
-from dotenv import dotenv_values
 import docker
 
-from in4labs_app.models import Reservation
-from in4labs_app.forms import ReservationForm
+from .config import Config
 
 
-class ReverseProxied:
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        scheme = environ.get('HTTP_X_FORWARDED_PROTO')
-        if scheme:
-            environ['wsgi.url_scheme'] = scheme
-        return self.app(environ, start_response)
-
-
-app = Flask(__name__, template_folder='templates', static_folder='static')
-app.config.from_pyfile("config.py")
-#app.secret_key = app.config["SECRET_KEY"]
-app.wsgi_app = ReverseProxied(app.wsgi_app)
-cache = Cache(app)
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+db = SQLAlchemy()
 login = LoginManager()
 
-
-# init sqlalchemy
-db.init_app(app)
+app = Flask(__name__, template_folder='templates', static_folder='static')
+app.config.from_object(Config)
 basedir = os.path.abspath(os.path.dirname(__file__))
-if not os.path.exists('sqlite:///' + os.path.join(basedir, 'iot_lab.db')): 
-    from .models import User
-    from .models import Reservation
-    with app.app_context():
-        db.create_all() # create tables in db
+
+cache = Cache(app)
+
+from .lti.utils import ReverseProxied
+app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 # init login
 login.init_app(app)
 
-# setup config
-config = {
-    "DEBUG": True,
-    "ENV": "development",
-    "CACHE_TYPE": "simple",
-    "CACHE_DEFAULT_TIMEOUT": 600,
-    "SECRET_KEY": "replace-me",
-    "SESSION_TYPE": "filesystem",
-    "SESSION_FILE_DIR": mkdtemp(),
-    "SESSION_COOKIE_NAME": "in4labs-app-sessionid",
-    "SESSION_COOKIE_HTTPONLY": True,
-    "SESSION_COOKIE_SECURE": False,   # should be True in case of HTTPS usage (production)
-    "SESSION_COOKIE_SAMESITE": None,  # should be 'None' in case of HTTPS usage (production)
-    "DEBUG_TB_INTERCEPT_REDIRECTS": False
-}
-app.config.from_mapping(config)
-cache = Cache(app)
+# init sqlalchemy
+db.init_app(app)
 
-PAGE_TITLE = 'In4Labs'
-LAB_NAME = 'IoT Lab'
+# create db if not exists
+from .models import User, Booking
+if not os.path.exists(os.path.join(basedir, 'in4labs.db')): 
+    print("Creating database...")
+    with app.app_context():
+        db.create_all() # create tables in db
 
+# create docker image if not exists
+client = docker.from_env()
+image_name = Config.DOCKER_IMAGE_NAME
+image_tag = "latest"
+try:
+    client.images.get(f"{image_name}:{image_tag}")
+except docker.errors.ImageNotFound:
+    print(f"Creating Docker image {image_name}:{image_tag}.")
+    dockerfile_path = os.path.join(basedir, 'docker')
+    image, build_logs = client.images.build(
+        path=dockerfile_path,
+        tag=f"{image_name}:{image_tag}",
+        rm=True,
+    )
+    for log in build_logs: # Print the build logs for debugging purposes
+        print(log.get("stream", "").strip())
 
-class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
-
-    def validate_nonce(self):
-        """
-        Probably it is bug on "https://lti-ri.imsglobal.org":
-        site passes invalid "nonce" value during deep links launch.
-        Because of this in case of iss == http://imsglobal.org just skip nonce validation.
-        """
-        iss = self.get_iss()
-        deep_link_launch = self.is_deep_link_launch()
-        if iss == "http://imsglobal.org" and deep_link_launch:
-            return self
-        return super().validate_nonce()
+# add blueprint for LTI
+from . import lti
+app.register_blueprint(lti.bp)
 
 
-def get_lti_config_path():
-    return os.path.join(app.root_path, '..', 'configs', 'app.json')
+@app.before_request
+def before_request():
+    # clear database from expired bookings
+    Booking.query.filter(Booking.date_time < datetime.now()-timedelta(minutes=Config.LAB_DURATION)).delete()
+    db.session.commit()
 
-
-def get_launch_data_storage():
-    return FlaskCacheDataStorage(cache)
-
-
-def get_jwk_from_public_key(key_name):
-    key_path = os.path.join(app.root_path, '..', 'configs', key_name)
-    f = open(key_path, 'r')
-    key_content = f.read()
-    jwk = Registration.get_jwk(key_content)
-    f.close()
-    return jwk
-
-
-def log_user(user_email):
-    user = User.query.filter_by(email=user_email).first()
-    if user is None: 
-        # Register the user if doesn't exist
-        user=User(email=user_email)
-        db.session.add(user)
-        db.session.commit()
-    login_user(user)
-
-
-@app.route('/jwks/', methods=['GET'])
-def get_jwks():
-    tool_conf = ToolConfJsonFile(get_lti_config_path())
-    # return jsonify({'keys': tool_conf.get_jwks()})
-    return jsonify(tool_conf.get_jwks()) # Moodle issue
-
-
-@app.route('/login/', methods=['GET', 'POST'])
-def login():
-    tool_conf = ToolConfJsonFile(get_lti_config_path())
-    launch_data_storage = get_launch_data_storage()
-
-    flask_request = FlaskRequest()
-    target_link_uri = flask_request.get_param('target_link_uri')
-    if not target_link_uri:
-        raise Exception('Missing "target_link_uri" param')
-
-    oidc_login = FlaskOIDCLogin(flask_request, tool_conf, launch_data_storage=launch_data_storage)
-    return oidc_login\
-        .enable_check_cookies()\
-        .redirect(target_link_uri)
-
-
-@app.route('/launch/', methods=['POST'])
-def launch():
-    tool_conf = ToolConfJsonFile(get_lti_config_path())
-    flask_request = FlaskRequest()
-    launch_data_storage = get_launch_data_storage()
-    message_launch = ExtendedFlaskMessageLaunch(flask_request, tool_conf, launch_data_storage=launch_data_storage)
-    message_launch_data = message_launch.get_launch_data()
-    session['message_launch_data'] = message_launch_data
-    pprint.pprint(message_launch_data)
-
-    user_email = message_launch_data.get('email', '')
-    log_user(user_email)
-
-    return redirect(url_for('index'))
-
-
-@app.route('/index/', methods=['GET'])
-# @login_required
+from .forms import BookingForm
+@app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
-    reservation_form = ReservationForm()
-    if reservation_form.validate_on_submit():
-        date_time = datetime.combine(reservation_form.date.data, reservation_form.hour.data)
-        reservation = Reservation(user=current_user.id, date_time=date_time)
-        db.session.add(reservation)
+    form = BookingForm(Config.LAB_DURATION)
+    if form.validate_on_submit():
+        date_time = datetime.combine(form.date.data, form.hour.data)
+        booking = Booking.query.filter_by(date_time=date_time).first()
+        if booking is not None: # time slot is already booked
+            flash('This time slot is already reserved, please select a different one.', 'error')
+            return redirect(url_for('index'))
+        booking = Booking(user_id=current_user.id, date_time=date_time)
+        db.session.add(booking)
         db.session.commit()
-        flash(f'Lab reserved successfully for {date_time.strftime("%d-%m-%Y")} at {date_time.hour}:00h')
+        flash(f'Lab reserved successfully for {date_time.strftime("%d/%m/%Y @ %H:%Mh.")}', 'success')
         return redirect(url_for('index'))
     
     message_launch_data = session['message_launch_data']
+
     # Possibility to get custom params
     custom_param = message_launch_data.get('https://purl.imsglobal.org/spec/lti/claim/custom', {}) \
         .get('custom_param', None)
 
     tpl_kwargs = {
-        'page_title': PAGE_TITLE,
-        'lab_name': LAB_NAME,
+        'page_title': Config.PAGE_TITLE,
+        'lab_name': Config.LAB_NAME,
+        'lab_duration': Config.LAB_DURATION,
         'launch_data': message_launch_data,
-        #'launch_id': message_launch.get_launch_id(),
+        'curr_user_email': message_launch_data.get('email'),
         'curr_user_name': message_launch_data.get('name', ''),
-        'curr_user_email': message_launch_data.get('email', ''),
-        'reservation_form': reservation_form,
+        'form': form,
     }
     return render_template('index.html', **tpl_kwargs)
 
 
 @app.route('/lab/', methods=['GET'])
-# @login_required
+@login_required
 def lab():
-    date_time = datetime.now().replace(minute=0, second=0, microsecond=0)
-    reservation = Reservation.query.filter_by(date_time=date_time).first()
-    if reservation and (reservation.user == current_user.id):
-        # add user name and ID in container config
+    minute = datetime.now().minute
+    round_minute = minute - (minute % Config.LAB_DURATION)
+    round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
+    booking = Booking.query.filter_by(date_time=round_date_time).first()
+    if booking and (booking.user_id == current_user.id):
+        end_time = round_date_time + timedelta(minutes=Config.LAB_DURATION)
         docker_config = {
-            **dotenv_values('docker/.env'),
-            'USER_NAME': session['message_launch_data'].get('name'),
+            'USER_EMAIL': session['message_launch_data'].get('email'),
             'USER_ID': current_user.id,
+            'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S'),
         }
-        client = docker.from_env()
-        container = client.containers.run('nginx:latest', detach=True, 
-                                          ports={'80/tcp': ('0.0.0.0', 0)}, environment=docker_config)
-        port = container.attrs['NetworkSettings']['Ports']['80/tcp'][0]['HostPort']
-        container_url = f'http://localhost:{port}'
+        port = 5001
+        container = client.containers.run(f'{image_name}:{image_tag}', detach=True, remove=True,
+                                            ports={'80/tcp': ('0.0.0.0', port)}, environment=docker_config)
+
+        remaining_secs = (end_time - datetime.now()).total_seconds()
+        stop_container = StopContainerTask(container, remaining_secs)
+        stop_container.start()
+        
+        hostname = request.headers.get('Host').split(':')[0]
+        container_url = f'http://{hostname}:{port}'
         return redirect(container_url)
     
+    flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
     return redirect(url_for('index'))
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9001)
+ 
+class StopContainerTask(threading.Thread):
+     def __init__(self, container, remaining_secs):
+         super(StopContainerTask, self).__init__()
+         self.container = container
+         self.remaining_secs = remaining_secs
+ 
+     def run(self):
+        # minus 2 seconds for safety
+        time.sleep(self.remaining_secs - 2)
+        self.container.stop()
+        print('Container stopped.')
