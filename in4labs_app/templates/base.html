@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 
 <!-- HEAD -->
@@ -26,23 +27,28 @@
         </div>
 
         <div class="page-title">
-            <span class="is-hidden-xs">{{ lab_name }}</span>
+            <h2>{{ lab_name }}</h2>
         </div>
         <div class="log-header">
             <div align="right">
                 <div >
-                    <p><strong>Log in as</strong>: {{curr_user_name}}</p>
+                    <p><strong>Log in as</strong>: {{ curr_user_name }}</p>
                 </div>
             </div>
         </div>
     </header>
 
     <main>
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <ul class="alert alert-success">
-                {% for message in messages %}
-                <li>{{ message }}</li>
+                <ul >
+                {% for category, message in messages %}
+                    {% if category == "error" %}
+                    <li class="alert alert-danger">{{ message }}</li>
+                    {% endif %}
+                    {% if category == "success" %}
+                    <li class="alert alert-success">{{ message }}</li>
+                    {% endif %}
                 {% endfor %}
                 </ul>
             {% endif %}
@@ -50,23 +56,6 @@
         
         {% block content %}{% endblock %}
     </main>
-
-    <!-- For compatibility: maybe useless -->
-    <div class="modal fade" tabindex="-1" role="dialog" id="modal_message" aria-labelledby="modal-message" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <p id="modal-msg"></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="loader-bg" style="display: none;">
-        <div class="loader" id="loader" >
-    </div>
 
     <footer>
 
