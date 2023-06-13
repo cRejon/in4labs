@@ -1,3 +1,4 @@
+import re
 from pylti1p3.contrib.flask import FlaskMessageLaunch
 
 class ReverseProxied:
@@ -21,5 +22,7 @@ class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
         iss = self.get_iss()
         deep_link_launch = self.is_deep_link_launch()
         if iss == "http://imsglobal.org" and deep_link_launch:
+            return self
+        if re.match(r"http://.*/moodle", iss):
             return self
         return super().validate_nonce()
