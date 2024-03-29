@@ -14,6 +14,7 @@ def index():
         'user_email': os.environ['USER_EMAIL'],
         'user_id': os.environ['USER_ID'],
         'end_time': os.environ['END_TIME'],
+        'cam_url': os.environ['CAM_URL'],
     }
     return render_template('index.html', **tpl_kwargs)
 

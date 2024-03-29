@@ -17,9 +17,11 @@
     </header>
 
     <main>
+        <div>
         <h3>Remaining time</h3>
         <div id="timer"></div>
-
+        </div>
+        
         <script>
             function countdownTimer(end_time) {
             let timerDisplay = document.getElementById('timer');
@@ -55,6 +57,18 @@
             let end_time = new Date("{{ end_time }}").getTime();
             countdownTimer(end_time); 
         </script>
+
+        <div>
+            <iframe id="cam"
+                    src="{{ cam_url }}"
+                    allowfullscreen="allowfullscreen"
+                    mozallowfullscreen="mozallowfullscreen"
+                    webkitallowfullscreen="webkitallowfullscreen"
+                    width="820"
+                    height="460">
+            </iframe>
+        </div>
+        
     </main>
 
     <footer>
