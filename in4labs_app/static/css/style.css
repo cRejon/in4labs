@@ -83,7 +83,6 @@ h6 {
 }
 
 .page-title {
-    position: absolute;
     text-align: center;
     width: calc(100vw - 350px);
     display: inline-block;
