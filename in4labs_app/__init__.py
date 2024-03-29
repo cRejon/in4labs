@@ -38,22 +38,6 @@ if not os.path.exists(os.path.join(basedir, 'in4labs.db')):
     with app.app_context():
         db.create_all() # create tables in db
 
-# create docker image if not exists
-client = docker.from_env()
-image_name = Config.DOCKER_IMAGE_NAME
-image_tag = "latest"
-try:
-    client.images.get(f"{image_name}:{image_tag}")
-except docker.errors.ImageNotFound:
-    print(f"Creating Docker image {image_name}:{image_tag}.")
-    dockerfile_path = os.path.join(basedir, 'docker')
-    image, build_logs = client.images.build(
-        path=dockerfile_path,
-        tag=f"{image_name}:{image_tag}",
-        rm=True,
-    )
-    for log in build_logs: # Print the build logs for debugging purposes
-        print(log.get("stream", "").strip())
 
 # add blueprint for LTI
 from . import lti
@@ -104,6 +88,8 @@ def index():
 @app.route('/lab/', methods=['GET'])
 @login_required
 def lab():
+    client = docker.from_env()
+    
     minute = datetime.now().minute
     round_minute = minute - (minute % Config.LAB_DURATION)
     round_date_time = datetime.now().replace(minute=round_minute, second=0, microsecond=0)
