@@ -7,12 +7,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     
-    PAGE_TITLE = 'DIEEC - In4Labs'
-    LAB_NAME = 'In4Labs - IoT Lab'
-    LAB_DURATION = 10 # minutes
-    #LAB_MAX_BOOKINGS = 1
-    DOCKER_IMAGE_NAME = 'iot_lab'
-    
     # Flask settings
     ENV = 'development'
     CACHE_TYPE = 'simple'
@@ -44,4 +38,23 @@ class Config(object):
             "public_key_file": None,
             "deployment_ids": ["1"]
         }]
+    }
+
+    # Labs settings
+    labs_config = {
+        'duration': 10, # minutes
+        'labs': [{
+            'lab_name' : 'lab_1',
+            'html_name' : 'Laboratory 1',
+            'description' : 'Example of a remote laboratory for Arduino.',
+            'host_port' : 8001,
+            'nat_port' : 8119,
+            'cam_url': 'http://62.204.201.51:8100/Mjpeg/1?authToken=2454ef16-84cf-4184-a748-8bddd993c078',
+        }, {
+            'lab_name' : 'lab_2',
+            'html_name' : 'Laboratory 2',
+            'description' : 'Example of a remote laboratory for Jupyter Notebook.',
+            'host_port' : 8002,
+            'nat_port' : 8220,
+        }],
     }
