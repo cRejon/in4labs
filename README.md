@@ -55,7 +55,7 @@ After=network.target
 [Service]
 User=pi
 WorkingDirectory=/home/pi/in4lab
-ExecStart=/home/pi/in4lab/venv/bin/gunicorn --workers 2 --bind 0.0.0.0:8000 -m 007 in4labs_app:app
+ExecStart=/home/pi/in4lab/venv/bin/gunicorn --workers 2 --timeout 1800 --bind 0.0.0.0:8000 -m 007 in4labs_app:app
 Restart=always
 
 [Install]
