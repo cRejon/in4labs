@@ -1,4 +1,4 @@
-DIEEC In4Labs base LTI tool
+DIEEC In4Labs base LTI tool  [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 =====
 # Description
 Implementation of a [LTI 1.3 tool](https://www.imsglobal.org/activity/learning-tools-interoperability) with Python Flask for Raspberry Pi.  
@@ -6,6 +6,15 @@ It brings together the common functionalities for all Labs: _login, time slot re
 It's intended to function with a Moodle, instaled in a local server, that works as a _LTI consumer_ for the tool. This Moodle also works as a [_LTI provider_](https://docs.moodle.org/402/en/Publish_as_LTI_tool) for others Learning Management Systems (LMS), centralizing access to all LTI tools (Labs) developed and allowing dynamic registration.  
 Tested on Raspberry Pi OS Bullseye (64-bit).  
 Requires Python >=3.9.
+
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
 # Setup Raspberry Pi
 ## Docker
@@ -15,33 +24,27 @@ Assuming the user is **pi** (default)
 $ sudo apt update
 $ curl -fsSL https://get.docker.com -o get-docker.sh
 $ sudo sh get-docker.sh
-$ sudo usermod -aG docker pi
+$ dockerd-rootless-setuptool.sh install
 $ rm get-docker.sh
 ```
-### Some useful commands
-To list all images
+## Tool dependencies
+For convenience, copy the project inside _/home/pi_ folder and from there, create
+a virtual environment and install the dependencies.
 ```
-docker image ls
-```
-To list all container (running and stopped)
-```
-docker container ls -a
-```
-To stop a container 
-```
-docker container stop [CONTAINER]
-```
-## Flask app + Gunicorn server
-### Installation
-For convenience, copy the project inside _/home/pi_ folder and from there, execute
-```
-$ cd in4labs
-$ python -m venv venv
+$ cd in4labs_auth
+$ sudo apt install -y python3-venv
+$ python3 -m venv venv
 $ . venv/bin/activate
 (venv) $ pip install -r requirements.txt
-(venv) $ deactivate
 ```
-### Running on boot
+## Create Docker images
+Docker images must be built before the first time the tool is run. The production server (Gunicorn) does not manage this process correctly, so this functionality is included in the **_create_images.py_** script.  
+In the project folder and inside the virtual environment, run:
+```
+(venv) $ python create_images.py
+```
+This process can take a long time, so be patient.
+## Running Gunicorn server on boot
 1. Create a systemd service file:
 ```
 $ sudo nano /etc/systemd/system/gunicorn.service
@@ -54,8 +57,8 @@ After=network.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/in4lab
-ExecStart=/home/pi/in4lab/venv/bin/gunicorn --workers 2 --timeout 1800 --bind 0.0.0.0:8000 -m 007 in4labs_app:app
+WorkingDirectory=/home/pi/in4labs
+ExecStart=/home/pi/in4labs/venv/bin/gunicorn --workers 2 --timeout 1800 --bind 0.0.0.0:8000 -m 007 in4labs_app:app
 Restart=always
 
 [Install]
