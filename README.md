@@ -25,6 +25,14 @@ $ python3 -m venv venv
 $ . venv/bin/activate
 (venv) $ pip install -r requirements.txt
 ```
+## Generate JWT RS256 key and JWKS
+Create the necessary keys for LTI protocol in the *config* folder.
+```
+$ cd in4labs_app/config
+$ ssh-keygen -t rsa -b 4096 -m PEM -f jwtRS256.key
+# Don't add passphrase
+$ openssl rsa -in jwtRS256.key -pubout -outform PEM -out jwtRS256.key.pub
+```
 ## Labs installation
 There are two example Labs in the _labs_ folder, delete them and copy the ones you want to install.
 ### Create Docker images
@@ -69,7 +77,7 @@ $ sudo systemctl status gunicorn
 ```
 
 # Configuration
-The two main parameters to configure this tool are the IP for Moodle (**MOODLE_HOST**) and the IP for the tool (**TOOL_HOST**).
+The two main parameters to configure this tool are the public IPs for Moodle (**MOODLE_HOST**) and for the tool (**TOOL_HOST**).
 ## Moodle
 To install Moodle in Ubuntu follow instructions in the [installation guide](https://docs.moodle.org/402/en/Step-by-step_Installation_Guide_for_Ubuntu).  
 To add a new LTI tool, log in as an admin and follow the next steps:
@@ -106,7 +114,7 @@ To add a new LTI tool, log in as an admin and follow the next steps:
 5. To add the tool to a course follow the instruction in this [link](https://docs.moodle.org/402/en/External_tool).
 
 ## Tool
-Edit **_config.py_** file inside _in4lab_app_ directory and change the variables of the **_Config_** object to those required.
+Edit **_config.py_** file inside _config_ directory and change the variables of the **_Config_** object to those required.
 ### Flask settings
 Change the development variables to those needed in production, including the use of HTTPS. 
 ### LTI settings
