@@ -11,7 +11,7 @@ from pylti1p3.registration import Registration
 from . import bp
 from .utils import ExtendedFlaskMessageLaunch
 from .. import app, db, cache
-from ..config import Config
+from ..config.config import Config
 from ..models import User
 
 
