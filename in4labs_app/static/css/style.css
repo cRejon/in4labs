@@ -63,31 +63,31 @@ h6 {
 
 /* Navigation */
 #main-header {
-    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: #f4f1f0;
     color: #000;
     height: 105px;
     padding: 20px 30px;
+    position: relative;
 }
 
 .logos-header {
-    display: inline;
+    display: flex;
+    align-items: center; /* Center align items vertically */
 }
 
 .logos-header .image {
-	height: 100%;
-}
-
-.logos-header:not(:first-child) {
-    margin-left: 100px;
+    height: 100%;
 }
 
 .page-title {
     text-align: center;
-    width: calc(100vw - 350px);
-    display: inline-block;
-    height: auto;
-    vertical-align: middle;
+    flex-grow: 1; /* Allow the page title to take available space */
+    display: flex;
+    align-items: center; /* Center align items vertically */
+    justify-content: center;
 }
 
 .page-title span {
@@ -99,9 +99,10 @@ h6 {
 }
 
 .log-header {
-    display: inline;
-    float: right;
+    display: flex;
+    align-items: center; /* Center align items vertically */
     padding: 10px;
+    white-space: nowrap; /* Prevent text from wrapping */
 }
 
 #flag {
