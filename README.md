@@ -1,10 +1,9 @@
 DIEEC In4Labs base LTI tool  [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 =====
 # Description
-Implementation of a [LTI 1.3 tool](https://www.imsglobal.org/activity/learning-tools-interoperability) with Python Flask for Raspberry Pi.  
-It brings together the common functionalities for all In4Labs Arduino Labs: _login, time slot reservation_ and _access control_. The specific functionalities of each Lab must be implemented inside a Docker container that will be run by this tool.  
+Implementation of a [LTI 1.3 tool](https://www.imsglobal.org/activity/learning-tools-interoperability) with Python Flask for Raspberry Pi. It brings together the common functionalities for all In4Labs Arduino Labs: _login, time slot reservation_ and _access control_. The specific functionalities of each Lab must be implemented inside a Docker container that will be run by this tool.  
 It's intended to function with a Moodle, instaled in a local server, that works as a _LTI consumer_ for the tool. This Moodle also works as a [_LTI provider_](https://docs.moodle.org/402/en/Publish_as_LTI_tool) for others Learning Management Systems (LMS), centralizing access to all LTI tools (Labs) developed and allowing dynamic registration.  
-Tested on Raspberry Pi OS Bullseye (64-bit). For convenience, set the user name as **pi** (default).
+Tested on Raspberry Pi OS Bullseye (64-bit). For convenience, set the user name as **pi** (default).  
 Requires Python >=3.9.
 
 # Setup Raspberry Pi
@@ -69,9 +68,9 @@ $ sudo systemctl enable gunicorn
 $ sudo systemctl status gunicorn
 ```
 
-# Tool configuration
+# Configuration
 The two main parameters to configure this tool are the IP for Moodle (**MOODLE_HOST**) and the IP for the tool (**TOOL_HOST**).
-## Moodle 
+## Moodle
 To install Moodle in Ubuntu follow instructions in the [installation guide](https://docs.moodle.org/402/en/Step-by-step_Installation_Guide_for_Ubuntu).  
 To add a new LTI tool, log in as an admin and follow the next steps:
 1. Navigate to **_Site Administration -> Plugins -> Activity Modules -> External Tool -> Manage Tools_**
@@ -106,8 +105,8 @@ To add a new LTI tool, log in as an admin and follow the next steps:
    - Authentication request URL: http://MOODLE_HOST/moodle/mod/lti/auth.php
 5. To add the tool to a course follow the instruction in this [link](https://docs.moodle.org/402/en/External_tool).
 
-## Raspberry Pi
-Edit **_config.py_** file inside _in4lab_app_ directory and change the variables of the **Config** object to those required.
+## Tool
+Edit **_config.py_** file inside _in4lab_app_ directory and change the variables of the **_Config_** object to those required.
 ### Flask settings
 Change the development variables to those needed in production, including the use of HTTPS. 
 ### LTI settings
