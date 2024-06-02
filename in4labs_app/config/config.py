@@ -37,8 +37,8 @@ class Config(object):
             'auth_audience': None,
             'key_set_url': f'http://{MOODLE_HOST}/moodle/mod/lti/certs.php',
             'key_set': None,
-            'private_key_file': None,
-            'public_key_file': None,
+            'private_key_file': 'jwtRS256.key',
+            'public_key_file': 'jwtRS256.key.pub',
             'deployment_ids': [DEPLOYMENT_ID]
         }]
     }
