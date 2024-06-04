@@ -12,6 +12,7 @@ Requires Python >=3.9.
 $ sudo apt update
 $ curl -fsSL https://get.docker.com -o get-docker.sh
 $ sudo sh get-docker.sh
+$ sudo apt-get install -y uidmap
 $ dockerd-rootless-setuptool.sh install
 $ rm get-docker.sh
 ```
