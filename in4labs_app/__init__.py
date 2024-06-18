@@ -164,18 +164,27 @@ def enter_lab(lab_name):
         host_port = lab['host_port'] 
         nat_port = lab['nat_port']     
         hostname = request.headers.get('Host').split(':')[0]
-        container_url = f'http://{hostname}:{nat_port}'
+        lab_url = f'http://{hostname}:{nat_port}'
         end_time = start_date_time + timedelta(minutes=lab_duration)
+        # Check if the lab needs extra containers
+        extra_containers = lab.get('extra_containers', [])
+        # Check if node-red is in extra_containers and get the nat port
+        for extra_container in extra_containers:
+            if extra_container['name'] == 'node-red':
+                nodered_nat_port = extra_container['nat_port']
+                break
+            else:
+                nodered_nat_port = 0
 
         # Check if the actual time slot container is already running (e.g. the user click twice on the Enter button).
         # If so, redirect to the container url. If not, start the container
         try:
             container = client.containers.get(container_name)
-            return redirect(container_url)
+            return redirect(lab_url)
         except docker.errors.NotFound:
             pass 
         
-        # NOTE: The thread created by the StopContainerTask class sometimes doesn't stop the container,
+        # NOTE: The thread created by the StopContainersTask class sometimes doesn't stop the lab container,
         # so check if there is any previous container running and stop it  
         try:
             containers = client.containers.list()
@@ -194,9 +203,11 @@ def enter_lab(lab_name):
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S'),
             'CAM_URL': lab.get('cam_url', ''),
             'NOTEBOOK_PASSWORD': notebook_password,
+            'NODE_RED_URL': f'http://{hostname}:{nodered_nat_port}',
         }
         
-        container = client.containers.run(
+        containers = []
+        container_lab = client.containers.run(
                         image_name, 
                         name=container_name,
                         detach=True, 
@@ -205,35 +216,49 @@ def enter_lab(lab_name):
                         volumes={'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
+        containers.append(container_lab)
 
-        remaining_secs = (end_time - datetime.now()).total_seconds()
-        stop_container = StopContainerTask(lab_name, container, remaining_secs, current_user.email)
-        stop_container.start()
+        # Start the extra containers
+        for extra_container in extra_containers:
+            container_extra = client.containers.run(
+                            extra_container['image'], 
+                            name=extra_container["name"],
+                            detach=True,
+                            remove=True,
+                            network=extra_container['network'],
+                            ports=extra_container['ports'],
+                            command=extra_container.get('command', ''))
+            containers.append(container_extra)
+
+        stop_containers = StopContainersTask(lab_name, containers, end_time, current_user.email)
+        stop_containers.start()
         
-        return redirect(container_url)
+        return redirect(lab_url)
 
     else:
         flash('You don´t have a reservation for the actual time slot, please make a booking.', 'error')
         return redirect(url_for('book_lab', lab_name=lab_name))
 
  
-class StopContainerTask(threading.Thread):
-     def __init__(self, lab_name, container, remaining_secs, user_email):
-         super(StopContainerTask, self).__init__()
+class StopContainersTask(threading.Thread):
+     def __init__(self, lab_name, containers, end_time, user_email):
+         super(StopContainersTask, self).__init__()
          self.lab_name = lab_name
-         self.container = container
-         self.remaining_secs = remaining_secs
+         self.containers = containers
+         self.end_time = end_time
          self.user_email = user_email
  
      def run(self):
+        remaining_secs = (self.end_time - datetime.now()).total_seconds()
         # Minus 3 seconds to avoid conflicts with the next time slot container
-        time.sleep(self.remaining_secs - 3)
-        # Save the container logs to a file
-        logs = self.container.logs()
+        time.sleep(remaining_secs - 3)
+        # Save the container lab logs to a file
+        logs = self.containers[0].logs()
         logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
         logs = 'USER: ' + self.user_email + logs
         with open(f'{lab_name}_logs_UTC.txt', 'a') as f:
             f.write(logs)
-        # Stop the container
-        self.container.stop()
-        print('Container stopped.')
+        # Stop the containers
+        for container in self.containers:
+            container.stop()
+        print('Lab containers stopped.')

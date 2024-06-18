@@ -53,6 +53,14 @@ class Config(object):
             'host_port' : 8001,
             'nat_port' : 8881,
             'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
+            'extra_containers': [{
+                'name': 'mosquitto',
+                'image': 'eclipse-mosquitto',
+                'nat_port' : 8883,  
+                'ports': {'1883/tcp': ('0.0.0.0', 1883)},
+                'network': 'in4labs_net',
+                'command': '',
+            }]
         }, {
             'lab_name' : 'lab_2',
             'html_name' : 'Laboratory 2',
