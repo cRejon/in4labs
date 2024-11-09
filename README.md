@@ -106,12 +106,12 @@ To add a new LTI tool, log in as an admin and follow the next steps:
    - Accept grades from the tool: Never
   
 4. When complete, click **Save changes** and the tool should appear. In its upper right corner, click in the **View configuration details** icon to obtain the necessary information to configure the tool. It will look similar to this:
-   - Platform ID: http://MOODLE_HOST/moodle
+   - Platform ID: MOODLE_HOST/moodle
    - Client ID: CLIENT_ID
    - Deployment ID: DEPLOYMENT_ID
-   - Public keyset URL: http://MOODLE_HOST/moodle/mod/lti/certs.php
-   - Access token URL: http://MOODLE_HOST/moodle/mod/lti/token.php
-   - Authentication request URL: http://MOODLE_HOST/moodle/mod/lti/auth.php
+   - Public keyset URL: MOODLE_HOST/moodle/mod/lti/certs.php
+   - Access token URL: MOODLE_HOST/moodle/mod/lti/token.php
+   - Authentication request URL: MOODLE_HOST/moodle/mod/lti/auth.php
 5. To add the tool to a course follow the instruction in this [link](https://docs.moodle.org/402/en/External_tool).
 
 ## Tool
