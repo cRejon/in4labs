@@ -52,6 +52,7 @@ class Config(object):
             'description' : 'Example of a remote laboratory for Arduino.',
             'host_port' : 8001,
             'nat_port' : 8881,
+            'volumes': {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
             'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
             'extra_containers': [{
                 'name': 'mosquitto',
