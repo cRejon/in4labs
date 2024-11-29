@@ -10,7 +10,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
 import docker
 import bcrypt
-from argon2 import PasswordHasher
 
 from .config.config import Config
 
@@ -60,13 +59,6 @@ for lab in labs:
             html_content = f.read()
         with open(html_dest, 'w') as f:
             f.write(html_content)
-
-# Create a hashed password for the Jupyter notebook
-def create_hash(password):
-    ph = PasswordHasher(memory_cost=10240, time_cost=10, parallelism=8)
-    hash = ph.hash(password)
-    hash = ':'.join(('argon2', hash))
-    return hash
 
 def setup_node_red(client, volume_name, nodered_dir, user_email):
     # Clean the volume for the new user
@@ -220,15 +212,11 @@ def enter_lab(lab_name):
         except docker.errors.NotFound:
             pass
 
-        user_email = session['message_launch_data'].get('email')
-        # Use the user email as password for the Jupyter notebook
-        notebook_password = create_hash(user_email)
         docker_env = {
-            'USER_EMAIL': user_email,
+            'USER_EMAIL': current_user.email,
             'USER_ID': current_user.id,
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S'),
             'CAM_URL': lab.get('cam_url', ''),
-            'NOTEBOOK_PASSWORD': notebook_password,
             'NODE_RED_URL': f'http://{hostname}:{nodered_nat_port}',
         }
         
@@ -238,7 +226,7 @@ def enter_lab(lab_name):
             if extra_container['name'] == 'node-red':
                 volume_name = extra_container['volumes'].keys()[0]
                 nodered_dir = os.path.join(basedir, 'labs', lab_name, 'node-red')
-                setup_node_red(client, volume_name, nodered_dir, user_email)
+                setup_node_red(client, volume_name, nodered_dir, current_user.email)
 
             container_extra = client.containers.run(
                             extra_container['image'], 
