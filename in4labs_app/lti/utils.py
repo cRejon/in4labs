@@ -1,15 +1,23 @@
-import re
-from pylti1p3.contrib.flask import FlaskMessageLaunch
+from flask_login import login_user
+from pylti1p3.contrib.flask import FlaskMessageLaunch, FlaskCacheDataStorage
 
-class ReverseProxied:
-    def __init__(self, app):
-        self.app = app
+from .. import db, cache
+from ..app_bp.models import User
+from ..config.config import Config
 
-    def __call__(self, environ, start_response):
-        scheme = environ.get('HTTP_X_FORWARDED_PROTO')
-        if scheme:
-            environ['wsgi.url_scheme'] = scheme
-        return self.app(environ, start_response)
+
+def get_launch_data_storage():
+    return FlaskCacheDataStorage(cache)
+
+
+def log_user(user_email):
+    user = User.query.filter_by(email=user_email).first()
+    if user is None: 
+        # Register the user if doesn't exist
+        user= User(email=user_email)
+        db.session.add(user)
+        db.session.commit()
+    login_user(user, remember=False)
 
 
 class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
@@ -23,6 +31,6 @@ class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
         deep_link_launch = self.is_deep_link_launch()
         if iss == "http://imsglobal.org" and deep_link_launch:
             return self
-        if re.match(r"http://.*/moodle", iss):
+        if iss == Config.MOODLE_HOST: # Problem with Moodle nonce too
             return self
         return super().validate_nonce()

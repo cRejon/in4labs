@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     # Flask settings
-    ENV = 'development'
+    ENV = 'development' # change to 'production' in production
     CACHE_TYPE = 'simple'
     CACHE_DEFAULT_TIMEOUT = 600
     SECRET_KEY = 'replace-me', # change in production
@@ -45,13 +45,13 @@ class Config(object):
 
     # Labs settings
     labs_config = {
+        'server_name': 'rasp1',
         'duration': 10, # minutes
         'labs': [{
             'lab_name' : 'lab_1',
             'html_name' : 'Laboratory 1',
             'description' : 'Example of a remote laboratory for Arduino.',
             'host_port' : 8001,
-            'nat_port' : 8881,
             'volumes': {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}},
             'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
             'extra_containers': [{
@@ -67,6 +67,5 @@ class Config(object):
             'html_name' : 'Laboratory 2',
             'description' : 'Example of a remote laboratory for Jupyter Notebook.',
             'host_port' : 8002,
-            'nat_port' : 8882,
         }],
     }

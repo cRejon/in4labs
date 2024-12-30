@@ -1,4 +1,5 @@
 from flask_login import UserMixin
+
 from in4labs_app import login
 from in4labs_app import db
 

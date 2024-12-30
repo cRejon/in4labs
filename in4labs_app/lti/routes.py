@@ -1,36 +1,13 @@
-import os
 import pprint
 
 from flask import session, jsonify, redirect, url_for  
-from flask_login import login_user
 
-from pylti1p3.contrib.flask import FlaskOIDCLogin, FlaskRequest, FlaskCacheDataStorage
+from pylti1p3.contrib.flask import FlaskOIDCLogin, FlaskRequest
 from pylti1p3.tool_config import ToolConfDict
-from pylti1p3.registration import Registration
 
 from . import bp
-from .utils import ExtendedFlaskMessageLaunch
-from .. import app, db, cache
+from .utils import ExtendedFlaskMessageLaunch, get_launch_data_storage, log_user
 from ..config.config import Config
-from ..models import User
-
-
-def get_lti_config_path():
-    return os.path.join(app.root_path, '..', 'configs', 'app.json')
-
-
-def get_launch_data_storage():
-    return FlaskCacheDataStorage(cache)
-
-
-def log_user(user_email):
-    user = User.query.filter_by(email=user_email).first()
-    if user is None: 
-        # Register the user if doesn't exist
-        user= User(email=user_email)
-        db.session.add(user)
-        db.session.commit()
-    login_user(user, remember=False)
 
 
 @bp.route('/jwks/', methods=['GET'])
@@ -64,11 +41,13 @@ def launch():
     message_launch = ExtendedFlaskMessageLaunch(flask_request, tool_conf, launch_data_storage=launch_data_storage)
     message_launch_data = message_launch.get_launch_data()
     session['message_launch_data'] = message_launch_data
-    pprint.pprint(message_launch_data)
+    #pprint.pprint(message_launch_data)
 
     user_email = message_launch_data.get('email')
     if user_email:
         log_user(user_email)
 
-    return redirect(url_for('index'))
+    lab_name = message_launch_data.get('https://purl.imsglobal.org/spec/lti/claim/custom', {}).get('lab', None)
+
+    return redirect(url_for('app.book_lab', lab_name=lab_name))
 

@@ -18,9 +18,3 @@ class BookingForm(FlaskForm):
     def validate_hour(self, hour):
         round_minute = hour.data.minute - (hour.data.minute % self.lab_duration)
         self.hour.data = self.hour.data.replace(minute=round_minute)
-        
-        
-
-
-
-    
