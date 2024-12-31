@@ -2,7 +2,7 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import redirect, url_for, flash
 import bcrypt
@@ -62,7 +62,7 @@ class StopContainersTask(threading.Thread):
          self.user_email = user_email
  
      def run(self):
-        remaining_secs = (self.end_time - datetime.now()).total_seconds()
+        remaining_secs = (self.end_time - datetime.now(timezone.utc)).total_seconds()
         # Minus 3 seconds to avoid conflicts with the next time slot container
         time.sleep(remaining_secs - 3)
         # Save the container lab logs to a file
