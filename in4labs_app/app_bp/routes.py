@@ -144,6 +144,8 @@ def enter_lab(lab_name):
         lab_url_prefix = url_prefix + '/' + lab_name
         lab_image_name = f'{lab_name.lower()}:latest'
         host_port = lab['host_port'] 
+        default_volume = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
+        lab_volumes = default_volume.update(lab.get('volumes', {}))
         node_red_url = f'https://{hostname}/{server_name}/{lab_name}/node-red/'
         end_time = start_datetime + timedelta(minutes=lab_duration)
         docker_env = {
@@ -160,7 +162,7 @@ def enter_lab(lab_name):
                         detach=True, 
                         remove=True,
                         privileged=True,
-                        volumes=lab.get('volumes', {}),
+                        volumes=lab_volumes,
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)
         containers.append(container_lab)
