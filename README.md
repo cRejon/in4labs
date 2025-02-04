@@ -14,6 +14,7 @@ $ curl -fsSL https://get.docker.com -o get-docker.sh
 $ sudo sh get-docker.sh
 $ sudo apt-get install -y uidmap
 $ dockerd-rootless-setuptool.sh install
+$ sudo loginctl enable-linger pi
 $ rm get-docker.sh
 ```
 ## Python dependencies
