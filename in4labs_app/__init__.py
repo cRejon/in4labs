@@ -9,9 +9,6 @@ from .config.config import Config
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Export DOCKER_HOST environment variable to run in rootless mode
-os.environ['DOCKER_HOST'] = 'unix:///run/user/1000/docker.sock'
-
 # Define the url_prefix to work with reverse proxy
 url_prefix = '/' + Config.labs_config['server_name']
 
