@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 from flask import session, request, redirect, render_template, url_for, flash, jsonify
@@ -169,7 +170,7 @@ def enter_lab(lab_name):
 
         stop_containers = StopContainersTask(lab_name, containers, end_time, current_user.email)
         stop_containers.start()
-        
+        time.sleep(1) # Wait for the containers to start
         return redirect(lab_url)
 
     else:
