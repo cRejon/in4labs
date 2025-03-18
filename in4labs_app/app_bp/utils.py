@@ -66,7 +66,7 @@ class StopContainersTask(threading.Thread):
         # Minus 3 seconds to avoid conflicts with the next time slot container
         time.sleep(remaining_secs - 3)
         # Save the container lab logs to a file
-        logs = self.containers[0].logs()
+        logs = self.containers[-1].logs()
         logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
         logs = 'USER: ' + self.user_email + logs
         with open(f'{self.lab_name}_logs_UTC.txt', 'a') as f:
