@@ -6,8 +6,6 @@ from in4labs_app.config.config import Config
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-# Export DOCKER_HOST environment variable to run in rootless mode
-os.environ['DOCKER_HOST'] = 'unix:///run/user/1000/docker.sock'
 client = docker.from_env()
 
 # Function to create a Docker image from a Dockerfile
