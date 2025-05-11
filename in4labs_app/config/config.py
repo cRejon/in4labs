@@ -25,17 +25,17 @@ class Config(object):
 
     # LTI settings
     # Replace the values with the ones from your LMS as explained in the README
-    MOODLE_HOST = ''
+    MOODLE_HOST = '' # e.g. 'https://your-moodle-instance.com/moodle'
     CLIENT_ID = ''
     DEPLOYMENT_ID = ''
     lti_config = {
-        f'http://{MOODLE_HOST}/moodle': [{
+        MOODLE_HOST: [{
             'default': True,
             'client_id': CLIENT_ID,
-            'auth_login_url': f'http://{MOODLE_HOST}/moodle/mod/lti/auth.php',
-            'auth_token_url': f'http://{MOODLE_HOST}/moodle/mod/lti/token.php',
+            'auth_login_url': f'{MOODLE_HOST}/mod/lti/auth.php',
+            'auth_token_url': f'{MOODLE_HOST}/mod/lti/token.php',
             'auth_audience': None,
-            'key_set_url': f'http://{MOODLE_HOST}/moodle/mod/lti/certs.php',
+            'key_set_url': f'{MOODLE_HOST}/mod/lti/certs.php',
             'key_set': None,
             'private_key_file': 'jwtRS256.key',
             'public_key_file': 'jwtRS256.key.pub',
@@ -56,7 +56,6 @@ class Config(object):
             'extra_containers': [{
                 'name': 'mosquitto',
                 'image': 'eclipse-mosquitto',
-                'nat_port' : 8883,  
                 'ports': {'1883/tcp': ('0.0.0.0', 1883)},
                 'network': 'in4labs_net',
                 'command': '',
