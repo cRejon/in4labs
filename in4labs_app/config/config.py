@@ -23,6 +23,30 @@ class Config(object):
         'sqlite:///' + os.path.join(basedir, 'in4labs.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Labs settings
+    labs_config = {
+        'server_name': 'rasp1',
+        'mountings': [{
+            'id': '1', 
+            'duration': 10, # minutes
+            'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
+        },],
+        'labs': [{
+            'lab_name': 'lab_1',
+            'html_name': 'Laboratory 1',
+            'description': 'Example of a remote laboratory for Arduino.',
+            'mounting_id': '1',
+            'host_port': 8001,
+            'extra_containers': [{
+                'name': 'mosquitto',
+                'image': 'eclipse-mosquitto',
+                'ports': {'1883/tcp': ('0.0.0.0', 1883)},
+                'network': 'in4labs_net',
+                'command': '',
+            }]
+        },],
+    }
+
     # LTI settings
     # Replace the values with the ones from your LMS as explained in the README
     MOODLE_HOST = '' # e.g. 'https://your-moodle-instance.com/moodle'
@@ -41,24 +65,4 @@ class Config(object):
             'public_key_file': 'jwtRS256.key.pub',
             'deployment_ids': [DEPLOYMENT_ID]
         }]
-    }
-
-    # Labs settings
-    labs_config = {
-        'server_name': 'rasp1',
-        'duration': 10, # minutes
-        'labs': [{
-            'lab_name' : 'lab_1',
-            'html_name' : 'Laboratory 1',
-            'description' : 'Example of a remote laboratory for Arduino.',
-            'host_port' : 8001,
-            'cam_url': 'http://ULR_TO_WEBCAM/Mjpeg',
-            'extra_containers': [{
-                'name': 'mosquitto',
-                'image': 'eclipse-mosquitto',
-                'ports': {'1883/tcp': ('0.0.0.0', 1883)},
-                'network': 'in4labs_net',
-                'command': '',
-            }]
-        }],
     }
