@@ -1,13 +1,12 @@
 import pprint
 
 from flask import session, jsonify, redirect, url_for  
-
 from pylti1p3.contrib.flask import FlaskOIDCLogin, FlaskRequest
 from pylti1p3.tool_config import ToolConfDict
 
 from . import bp
 from .utils import ExtendedFlaskMessageLaunch, get_launch_data_storage, log_user
-from ..config.config import Config
+from in4labs_app.config.config import Config
 
 
 @bp.route('/jwks/', methods=['GET'])
@@ -47,7 +46,4 @@ def launch():
     if user_email:
         log_user(user_email)
 
-    lab_name = message_launch_data.get('https://purl.imsglobal.org/spec/lti/claim/custom', {}).get('lab', None)
-
-    return redirect(url_for('app.book_lab', lab_name=lab_name))
-
+    return redirect(url_for('app.index'))

@@ -13,6 +13,13 @@ from .models import Booking
 from .forms import BookingForm
 from .utils import StopContainersTask, setup_node_red, get_lab
 
+@bp.route('/')
+@login_required
+def index():
+    if len(labs) == 1:
+        return redirect(url_for('app.book_lab', lab_name=labs[0]['lab_name']))
+    else:
+        return render_template('select_lab.html', labs=labs, user_email=current_user.email)
 
 @bp.route('/book/<lab_name>/', methods=['GET', 'POST'])
 @login_required

@@ -1,9 +1,9 @@
 from flask_login import login_user
 from pylti1p3.contrib.flask import FlaskMessageLaunch, FlaskCacheDataStorage
 
-from .. import db, cache
-from ..app_bp.models import User
-from ..config.config import Config
+from in4labs_app import db, cache
+from in4labs_app.app_bp.models import User
+from in4labs_app.config.config import Config
 
 
 def get_launch_data_storage():
