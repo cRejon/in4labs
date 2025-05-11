@@ -45,5 +45,8 @@ def launch():
     user_email = message_launch_data.get('email')
     if user_email:
         log_user(user_email)
-
-    return redirect(url_for('app.index'))
+        return redirect(url_for('app.index'))
+    else:
+        # Handle the case where the email is not present in the launch data
+        return jsonify({'error': 'Email not found in launch data'}), 400
+    
