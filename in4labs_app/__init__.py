@@ -7,32 +7,32 @@ from flask_caching import Cache
 
 from .config.config import Config
 
+# Set the base directory to the current file's directory
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Define the url_prefix to work with reverse proxy
-url_prefix = '/' + Config.labs_config['server_name']
+# Get variables from config
+server_name = Config.labs_config['server_name']
+labs = Config.labs_config['labs']
+lab_duration = Config.labs_config['duration']
 
-db = SQLAlchemy()
-login = LoginManager()
-
-app = Flask(__name__, static_url_path=(url_prefix+'/static/'))
+app = Flask(__name__, template_folder='templates', static_folder='static',
+            static_url_path=(f'/{server_name}/static/'))
 app.config.from_object(Config)
 
 cache = Cache(app)
 
-from .app_bp.utils import ReverseProxied
-#app.wsgi_app = ReverseProxied(app.wsgi_app)
-
-if app.config['ENV'] == 'production':
+if app.config['ENV'] == 'production': 
     from werkzeug.middleware.proxy_fix import ProxyFix
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
     )
 
 # Init login
+login = LoginManager()
 login.init_app(app)
 
 # Init sqlalchemy
+db = SQLAlchemy()
 db.init_app(app)
 
 # Create db if not exists
@@ -43,7 +43,6 @@ if not os.path.exists(os.path.join(basedir, 'in4labs.db')):
         db.create_all() # create tables in db
 
 # Copy html files with lab instructions to templates folder
-labs = Config.labs_config['labs']
 for lab in labs:
     lab_name = lab['lab_name']
     html_path = os.path.join(basedir, 'labs', lab_name, 'instructions.html')
@@ -54,6 +53,10 @@ for lab in labs:
         with open(html_dest, 'w') as f:
             f.write(html_content)
 
-# Import blueprints
-from . import app_bp
-app.register_blueprint(app_bp.bp, url_prefix=url_prefix)
+# Register blueprints - moved to the end to avoid circular imports
+def register_blueprints():
+    from . import app_bp, lti
+    app.register_blueprint(app_bp.bp, url_prefix=f'/{server_name}')
+    app.register_blueprint(lti.bp, url_prefix=f'/{server_name}/lti')
+
+register_blueprints()

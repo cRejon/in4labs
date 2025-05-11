@@ -7,22 +7,50 @@ from flask_login import  current_user, login_required
 
 import docker
 
-from . import bp
+from in4labs_app import db, server_name, labs, lab_duration
+from in4labs_app.app_bp import bp
 from .models import Booking
+from .forms import BookingForm
 from .utils import StopContainersTask, setup_node_red, get_lab
-from .. import db
-from ..config.config import Config
 
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-lab_duration = Config.labs_config['duration']
-url_prefix = '/' + Config.labs_config['server_name']
+@bp.route('/book/<lab_name>/', methods=['GET', 'POST'])
+@login_required
+def book_lab(lab_name):
+    lab = get_lab(labs, lab_name)
+    
+    form = BookingForm(lab_duration)
+    if form.validate_on_submit():
+        user_datetime = datetime.fromisoformat(form.date_time.data)
+        formatted_user_datetime = user_datetime.strftime('%d/%m/%Y @ %H:%Mh')
+        utc_user_datetime = user_datetime.astimezone(timezone.utc)
+        # For security reasons, check again if the time slot is still available
+        booking = Booking.query.filter_by(lab_name=lab_name, date_time=utc_user_datetime).first()
+        if booking is not None: 
+            flash('Someone has booked the Lab before you, please select a different time slot.', 'error')
+            return redirect(url_for('app.book_lab', lab_name=lab_name))
+        
+        booking = Booking(user_id=current_user.id, lab_name=lab_name, date_time=utc_user_datetime)
+        db.session.add(booking)
+        db.session.commit()
+        flash(f'{lab["html_name"]} reserved successfully for {formatted_user_datetime}', 'success')
+        return redirect(url_for('app.book_lab', lab_name=lab_name))
+    
+    message_launch_data = session['message_launch_data']
+
+    tpl_kwargs = {
+        'lab': lab,
+        'lab_duration': lab_duration,
+        'user_email': message_launch_data.get('email'),
+        #'user_name': message_launch_data.get('name', ''),
+        'form': form,
+    }
+    return render_template('book_lab.html', **tpl_kwargs)
 
 # Check a timeslot availability with AJAX
-@bp.route('/check_slot')
+@bp.route('/book/<lab_name>/check_slot')
 @login_required
-def check_slot():
-    lab_name = request.args.get('lab_name') # not used because actual labs are exclusive
+def check_slot(lab_name):
     user_datetime = datetime.fromisoformat(request.args.get('user_datetime'))
     formatted_user_datetime = user_datetime.strftime('%d/%m/%Y @ %H:%Mh')
     utc_user_datetime = user_datetime.astimezone(timezone.utc)
@@ -47,47 +75,10 @@ def check_slot():
          
     return jsonify(response)
 
-from .forms import BookingForm
-@bp.route('/<lab_name>/book/', methods=['GET', 'POST'])
-@login_required
-def book_lab(lab_name):
-    lab = get_lab(lab_name)
-    
-    form = BookingForm(lab_duration)
-    if form.validate_on_submit():
-        user_datetime = datetime.fromisoformat(form.date_time.data)
-        formatted_user_datetime = user_datetime.strftime('%d/%m/%Y @ %H:%Mh')
-        utc_user_datetime = user_datetime.astimezone(timezone.utc)
-        # For security reasons, check again if the time slot is still available
-        booking = Booking.query.filter_by(lab_name=lab_name, date_time=utc_user_datetime).first()
-        if booking is not None: 
-            flash('Someone has booked the Lab before you, please select a different time slot.', 'error')
-            return redirect(url_for('app.book_lab', lab_name=lab_name))
-        
-        booking = Booking(user_id=current_user.id, lab_name=lab_name, date_time=utc_user_datetime)
-        db.session.add(booking)
-        db.session.commit()
-        flash(f'{lab["html_name"]} reserved successfully for {formatted_user_datetime}', 'success')
-        return redirect(url_for('app.book_lab', lab_name=lab_name))
-    
-    message_launch_data = session['message_launch_data']
-
-    tpl_kwargs = {
-        'lab': lab,
-        'lab_duration': lab_duration,
-        'url_prefix': url_prefix,
-        'launch_data': message_launch_data,
-        'user_email': message_launch_data.get('email'),
-        'user_name': message_launch_data.get('name', ''),
-        'form': form,
-    }
-    return render_template('book_lab.html', **tpl_kwargs)
-
-
-@bp.route('/<lab_name>/enter/', methods=['GET'])
+@bp.route('/enter/<lab_name>/', methods=['GET'])
 @login_required
 def enter_lab(lab_name):
-    lab = get_lab(lab_name) 
+    lab = get_lab(labs, lab_name)
     
     actual_minute = datetime.now(timezone.utc).minute
     start_minute = actual_minute - (actual_minute % lab_duration)
@@ -95,10 +86,8 @@ def enter_lab(lab_name):
     booking = Booking.query.filter_by(lab_name=lab_name, date_time=start_datetime).first()
 
     if booking and (booking.user_id == current_user.id):
+        lab_url = f'/{server_name}/{lab_name}/'
         client = docker.from_env()
-        server_name = Config.labs_config['server_name']    
-        hostname = request.headers.get('Host').split(':')[0]
-        lab_url = f'https://{hostname}/{server_name}/{lab_name}/'
         # Create a unique container name with the lab name and the start date time
         container_name = f'{lab_name.lower()}-{start_datetime.strftime("%Y%m%d%H%M")}'
 
@@ -127,6 +116,7 @@ def enter_lab(lab_name):
             # Setup the node-red container
             if extra_container['name'] == 'node-red':
                 volume_name = list(extra_container['volumes'].keys())[0]
+                basedir = os.path.abspath(os.path.dirname(__file__))
                 nodered_dir = os.path.join(basedir, 'labs', lab_name, 'node-red')
                 setup_node_red(client, volume_name, nodered_dir, current_user.email)
 
@@ -142,19 +132,17 @@ def enter_lab(lab_name):
             containers.append(container_extra)
         
         # Run the lab container
-        lab_url_prefix = url_prefix + '/' + lab_name
         lab_image_name = f'{lab_name.lower()}:latest'
         host_port = lab['host_port'] 
         default_volume = {'/dev/bus/usb': {'bind': '/dev/bus/usb', 'mode': 'rw'}}
         lab_volumes = default_volume.update(lab.get('volumes', {}))
-        node_red_url = f'https://{hostname}/{server_name}/{lab_name}/node-red/'
         end_time = start_datetime + timedelta(minutes=lab_duration)
         docker_env = {
-            'URL_PREFIX': lab_url_prefix,
+            'SERVER_NAME': server_name,
+            'LAB_NAME': lab_name,
             'USER_EMAIL': current_user.email,
             'END_TIME': end_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
             'CAM_URL': lab.get('cam_url', ''),
-            'NODE_RED_URL': node_red_url,
         }
 
         container_lab = client.containers.run(
@@ -163,6 +151,7 @@ def enter_lab(lab_name):
                         detach=True, 
                         remove=True,
                         privileged=True,
+                        #devices=['/dev/ttyACM[0-9]*:/dev/ttyACM[0-9]*:rwm'],
                         volumes=lab_volumes,
                         ports={'8000/tcp': ('0.0.0.0', host_port)}, 
                         environment=docker_env)

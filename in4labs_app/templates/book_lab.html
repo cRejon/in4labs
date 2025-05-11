@@ -55,10 +55,9 @@
         var user_datetime = new Date($('#date').val() + 'T' + $('#time').val());
         $('#date_time').val(toIsoString(user_datetime));
         $.ajax({
-            url:"{{ url_prefix + '/check_slot' }}",
+            url: 'check_slot',
             type: 'GET',
             data: {
-                lab_name: "{{ lab.lab_name }}",
                 user_datetime: toIsoString(user_datetime),
             },
             success: function(response) {

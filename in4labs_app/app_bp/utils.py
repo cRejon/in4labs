@@ -5,18 +5,39 @@ import time
 from datetime import datetime, timezone
 
 from flask import redirect, url_for, flash
+
 import bcrypt
 
-from ..config.config import Config
 
+class StopContainersTask(threading.Thread):
+     def __init__(self, lab_name, containers, end_time, user_email):
+         super(StopContainersTask, self).__init__()
+         self.lab_name = lab_name
+         self.containers = containers
+         self.end_time = end_time
+         self.user_email = user_email
+ 
+     def run(self):
+        remaining_secs = (self.end_time - datetime.now(timezone.utc)).total_seconds()
+        # Minus 3 seconds to avoid conflicts with the next time slot container
+        time.sleep(remaining_secs - 3)
+        # Save the container lab logs to a file
+        logs = self.containers[-1].logs()
+        logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
+        logs = 'USER: ' + self.user_email + logs
+        with open(f'{self.lab_name}_logs_UTC.txt', 'a') as f:
+            f.write(logs)
+        # Stop the containers
+        for container in self.containers:
+            container.stop()
+        print('Lab containers stopped.')
 
-def get_lab(lab_name):
-    labs = Config.labs_config['labs']
+def get_lab(labs, lab_name):
     for lab in labs:
         if lab['lab_name'] == lab_name:
             return lab   
     flash(f'Lab not found.', 'error')
-    return redirect(url_for('index'))
+    return redirect(url_for('app.index'))
 
 def setup_node_red(client, volume_name, nodered_dir, user_email):
     # Clean the volume for the new user
@@ -41,37 +62,4 @@ def setup_node_red(client, volume_name, nodered_dir, user_email):
     settings_file = os.path.join(nodered_dir, 'settings.js')
     with open(settings_file, 'w') as file:
         file.write(js_content)
-
-
-class ReverseProxied:
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        scheme = environ.get('HTTP_X_FORWARDED_PROTO')
-        if scheme:
-            environ['wsgi.url_scheme'] = scheme
-        return self.app(environ, start_response)
-    
-class StopContainersTask(threading.Thread):
-     def __init__(self, lab_name, containers, end_time, user_email):
-         super(StopContainersTask, self).__init__()
-         self.lab_name = lab_name
-         self.containers = containers
-         self.end_time = end_time
-         self.user_email = user_email
- 
-     def run(self):
-        remaining_secs = (self.end_time - datetime.now(timezone.utc)).total_seconds()
-        # Minus 3 seconds to avoid conflicts with the next time slot container
-        time.sleep(remaining_secs - 3)
-        # Save the container lab logs to a file
-        logs = self.containers[-1].logs()
-        logs = logs.decode('utf-8').split('Press CTRL+C to quit')[1]
-        logs = 'USER: ' + self.user_email + logs
-        with open(f'{self.lab_name}_logs_UTC.txt', 'a') as f:
-            f.write(logs)
-        # Stop the containers
-        for container in self.containers:
-            container.stop()
-        print('Lab containers stopped.')
+   
