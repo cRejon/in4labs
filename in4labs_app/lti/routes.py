@@ -6,7 +6,7 @@ from pylti1p3.tool_config import ToolConfDict
 
 from . import bp
 from .utils import ExtendedFlaskMessageLaunch, get_launch_data_storage, log_user
-from in4labs_app.config.config import Config
+from in4labs_app.config import Config
 
 
 @bp.route('/jwks/', methods=['GET'])

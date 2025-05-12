@@ -5,7 +5,7 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_caching import Cache
 
-from .config.config import Config
+from .config import Config
 
 # Set the base directory to the current file's directory
 basedir = os.path.abspath(os.path.dirname(__file__))
