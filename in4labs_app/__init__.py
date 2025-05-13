@@ -36,7 +36,8 @@ db = SQLAlchemy()
 db.init_app(app)
 
 # Create db if not exists
-from .app_bp.models import User, Booking
+from .app_bp.models import Booking
+from .lti.models import User
 if not os.path.exists(os.path.join(basedir, 'in4labs.db')): 
     print('Creating database...')
     with app.app_context():
