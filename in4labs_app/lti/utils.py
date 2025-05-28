@@ -1,8 +1,8 @@
 from flask_login import login_user
 from pylti1p3.contrib.flask import FlaskMessageLaunch, FlaskCacheDataStorage
 
+from .models import User
 from in4labs_app import db, cache
-from in4labs_app.app_bp.models import User
 from in4labs_app.config import Config
 
 
