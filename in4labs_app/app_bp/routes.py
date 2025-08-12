@@ -160,10 +160,10 @@ def enter_lab(lab_name):
     extra_containers = lab.get('extra_containers', [])
     for extra_container in extra_containers:
         if extra_container['name'] == 'node-red':
-            volume_name = list(extra_container['volumes'].keys())[0]
-            basedir = os.path.abspath(os.path.dirname(__file__))
-            nodered_dir = os.path.join(basedir, 'labs', lab_name, 'node-red')
-            setup_node_red(client, volume_name, nodered_dir, current_user.email)
+            nodered_dir = os.path.join(current_app.root_path , 'labs', lab_name, 'node-red')
+            nodered_url = lab_url + 'nodered' # don't put the trailing slash
+            volume_name = list(extra_container['volumes'].keys())[0] # e.g. 'integration_lab_vol'
+            setup_node_red(client, volume_name, nodered_dir, nodered_url, current_user.email)
 
         container_extra = client.containers.run(
                         extra_container['image'], 

@@ -39,27 +39,33 @@ def get_lab(labs, lab_name):
     flash(f'Lab not found.', 'error')
     return redirect(url_for('app.index'))
 
-def setup_node_red(client, volume_name, nodered_dir, user_email):
+def setup_node_red(client, volume_name, dir, url, email):
     # Clean the volume for the new user
     volume = client.volumes.get(volume_name)
     volume.remove()
     client.volumes.create(volume_name)
     # Set the username and password for the node-red container
     # Generate bcrypt hash from the user email
-    hashed_password = bcrypt.hashpw(user_email.encode(), bcrypt.gensalt()).decode()
+    hashed_password = bcrypt.hashpw(email.encode(), bcrypt.gensalt()).decode()
     # Copy the default settings file
-    settings_default_file = os.path.join(nodered_dir, 'settings_default.js')
+    settings_default_file = os.path.join(dir, 'settings_default.js')
     with open(settings_default_file, 'r') as file:
         js_content = file.read()
-    # Use regular expressions to find and replace the username and password
+    # Use regular expressions to find and replace the username, password, admin URL, and node URL
     username_pattern = r'username:\s*"[^"]*"'
     password_pattern = r'password:\s*"[^"]*"'
-    new_username_line = f'username: "{user_email}"'
+    admin_url_pattern = r'httpAdminRoot:\s*"[^"]*"'
+    node_url_pattern = r'httpNodeRoot:\s*"[^"]*"'
+    new_username_line = f'username: "{email}"'
     new_password_line = f'password: "{hashed_password}"'
+    new_admin_url_line = f'httpAdminRoot: "{url}"'
+    new_node_url_line = f'httpNodeRoot: "{url}"'
     js_content = re.sub(username_pattern, new_username_line, js_content)
     js_content = re.sub(password_pattern, new_password_line, js_content)
+    js_content = re.sub(admin_url_pattern, new_admin_url_line, js_content)
+    js_content = re.sub(node_url_pattern, new_node_url_line, js_content)
     # Write the modified content in a settings.js file
-    settings_file = os.path.join(nodered_dir, 'settings.js')
+    settings_file = os.path.join(dir, 'settings.js')
     with open(settings_file, 'w') as file:
         file.write(js_content)
    
